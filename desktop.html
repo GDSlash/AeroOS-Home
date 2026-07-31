@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>aeroOS Desktop</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const authParam = urlParams.get('auth');
+        const userParam = urlParams.get('user') || 'User'; 
+
+        // Redirect if auth=0
+        if (authParam === '0') {
+            try {
+                window.location.replace('index.html');
+            } catch (e) {
+                console.warn("Auth redirect blocked by preview environment.");
+            }
+        }
+    </script>
+
+    <style>
+        /* Globally enforce overflow lock */
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: url('assets/img/wallpaper/system1.jpg') center center / cover fixed no-repeat;
+            font-family: "Lucida Grande", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            perspective-origin: 0 0;
+        }
+
+        /*--Header--*/
+        header {
+            background: linear-gradient(to bottom, rgb(245, 245, 245) 0%, rgb(200, 200, 200) 100%);
+            border-bottom: 1px solid rgba(0,0,0,0.4);
+            display: block;
+            font-size: 0.9em;
+            height: 1.5em;
+            -webkit-user-select: none;
+            user-select: none;
+            position: relative;
+            z-index: 10000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        header ul { margin: 0 5px; padding: 0 3px; }
+        header li {
+            display: inline-block;
+            line-height: 1.5em;
+            padding: 0 0.8em;
+            position: relative;
+            cursor: default;
+        }
+        header .left { float: left; }
+        header .right { float: right; }
+
+        a { color: #000; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        header .selected {
+            background: linear-gradient(to bottom, rgb(89, 120, 245) 0%, rgb(51, 94, 246) 100%);
+            color: #fff;
+            border-bottom: 0.1em solid #5978f5;
+        }
+
+        /*--Menus--*/
+        .visible { display: block !important; }
+        .shortcut:after { content: attr(shortcut); float: right; padding-right: 20px; }
+        .search { padding: 5px 10px !important; }
+        .noChoice { color: #adadad; }
+        .noChoice:hover { background: #fff !important; color: #adadad !important; }
+        #volume-icon-li { width: 1em; }
+        .submenu { display: none; }
+        
+        .submenu input[type="text"] {
+            border-radius: 2em;
+            border: 1px solid #333;
+            height: 2em;
+            padding: 0 10px;
+        }
+        .submenu input[type="range"] {
+            transform: rotate(-90deg);
+            margin-left: -50px;
+            margin-top: 65px;
+        }
+        .submenu ul {
+            background: rgba(250, 250, 250, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 0 0 5px 5px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            color: #333;
+            font-size: 14px;
+            left: 0px;
+            margin: 0 !important;
+            overflow: hidden;
+            padding: 0 5px 0 0;
+            position: absolute;
+            top: 1.5em;
+            width: auto;
+            white-space: nowrap;
+            z-index: 10001;
+        }
+        .submenu ul.volume {
+            height: 10em;
+            width: 2em;
+            margin: 0;
+            padding: 0;
+            position: absolute;
+            overflow: visible;
+        }
+        .submenu ul.volume li { margin: 0; padding: 0; }
+        
+        .submenu ul li {
+            display: block !important;
+            float: none;
+            margin-right: 75px;
+            font-weight: 400;
+            padding: 2.5px 0px 2.5px 15px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .submenu ul li.spacer {
+            background: rgba(0, 0, 0, 0.1);
+            height: 1px !important;
+            margin: 4px 0;
+            padding: 0;
+            width: 102%;
+            position: relative;
+        }
+        .submenu ul li.spacer:hover { background: rgba(0, 0, 0, 0.1); }
+        .submenu li:hover:not(.volume) {
+            background: linear-gradient(to bottom, rgb(89, 120, 245) 0%, rgb(51, 94, 246) 100%);
+            color: #fff;
+        }
+
+        /*--Desktop--*/
+        #Desktop {
+            display: flex;
+            align-content: right;
+            flex-direction: column;
+            align-items: flex-end;
+            height: 85vh;
+            padding: 25px;
+            position: absolute;
+            right: 0 !important;
+            text-align: right;
+            z-index: 1;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #Desktop span.icon {
+            display: block;
+            float: right;
+            margin: 5px 0;
+            transition: all 0.2s;
+            width: auto;
+            z-index: 1;
+            text-align: center;
+            cursor: pointer;
+        }
+        #Desktop span.icon:after {
+            color: #fff;
+            content: attr(data-title);
+            display: block;
+            margin-bottom: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-shadow: 0px 1px 2px rgba(0,0,0,0.8);
+            transition: all 0.2s;
+        }
+        #Desktop span.icon img {
+            border: 2px solid rgba(225, 225, 225, 0);
+            border-radius: 6px;
+            transition: all 0.2s;
+            width: 65px;
+        }
+        .focus img { border: 2px solid rgba(225, 225, 225, 0.5) !important; }
+        span.focus:after { background: rgba(20, 110, 206, 0.8); text-shadow: none !important;}
+
+        /*--Dock--*/
+        footer {
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 4.4em;
+            left: 50%;
+            min-width: 35em;
+            padding: 0 10px;
+            perspective: 1000px;
+            position: absolute;
+            text-align: center;
+            transform: translatex(-50%);
+            z-index: 9999;
+            white-space: nowrap;
+            width: max-content;
+        }
+        footer:before {
+            background: linear-gradient(to top, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-bottom: none;
+            border-radius: 5px 5px 0 0;
+            bottom: 0;
+            content: "";
+            height: 4em;
+            left: 0;
+            margin-top: 15px;
+            position: absolute;
+            right: 0;
+            top: 0;
+            transform: rotatex(30deg);
+            width: 100%;
+            z-index: -1;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+        }
+        footer ul {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            margin: 0 0.1em;
+            padding: 0;
+            height: 100%;
+            transform-origin: bottom center !important;
+        }
+        footer li {
+            display: inline-flex;
+            align-items: flex-end;
+            justify-content: center;
+            position: relative;
+            transform: scale(1);
+            transform-origin: bottom center;
+            transition: margin 0.2s;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+        footer li:before {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: #fff;
+            content: attr(data-title);
+            display: block;
+            font-size: 0.9em;
+            left: 50%;
+            margin: 2px auto;
+            opacity: 0;
+            padding: 4px 10px;
+            position: absolute;
+            text-align: center;
+            top: -45px;
+            transform: translatex(-50%);
+            transform-origin: bottom center !important;
+            visibility: hidden;
+            white-space: nowrap;
+            pointer-events: none;
+            transition: top 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.2s;
+        }
+        footer li:hover:before {
+            opacity: 1;
+            top: -55px;
+            visibility: visible;
+        }
+        footer img {
+            -webkit-box-reflect: below -5px linear-gradient(to bottom, rgba(230, 230, 230, 0) 0%, rgba(255, 255, 255, 0.3) 100%);
+            align-items: center;
+            bottom: 0;
+            display: flex;
+            justify-content: center;
+            margin: 0 5px;
+            position: relative;
+            transform-origin: bottom center !important;
+            transition: width 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.2s cubic-bezier(0.2, 0.9, 0.3, 1), margin 0.2s;
+            width: 4em;
+            height: auto;
+            pointer-events: none; 
+        }
+        
+        /* Dock Magnification Core Logic */
+        footer li:hover img {
+            width: 6em;
+            transform: translateY(-10px);
+        }
+        footer li:hover + li img,
+        footer li:has(+ li:hover) img {
+            width: 5em;
+            transform: translateY(-5px);
+        }
+
+        /* Dock Divider / Crosswalk */
+        .dock-separator {
+            width: 35px !important;
+            height: 4em !important;
+            position: relative;
+            margin: 0 15px !important;
+            pointer-events: none;
+            display: inline-block;
+            background: linear-gradient(
+                90deg,
+                transparent 15%,
+                rgba(255, 255, 255, 0.5) 15%, rgba(255, 255, 255, 0.5) 40%,
+                transparent 40%, transparent 60%,
+                rgba(255, 255, 255, 0.5) 60%, rgba(255, 255, 255, 0.5) 85%,
+                transparent 85%
+            );
+            transform: perspective(150px) rotateX(45deg) !important;
+            transform-origin: bottom center;
+            opacity: 0.8;
+            border-radius: 2px;
+        }
+        footer li.dock-separator:hover { transform: perspective(150px) rotateX(45deg) !important; }
+        footer li.dock-separator:before { display: none !important; }
+
+        .jump { animation: JUMP 600ms 2 cubic-bezier(0.4, 0.01, 0.6, 0.99); }
+        @keyframes JUMP {
+            0% { bottom: 0; }
+            50% { bottom: 25px; padding-bottom: 25px; }
+            100% { bottom: 0; }
+        }
+
+        /* Stacking Notifications */
+        #notifications-container {
+            position: absolute;
+            top: 40px;
+            right: 15px;
+            z-index: 10002;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .mac-notification {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 12px;
+            padding: 15px 20px;
+            width: 300px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            animation: slideInNotif 0.4s cubic-bezier(0.2, 0.9, 0.3, 1);
+            pointer-events: auto;
+            font-size: 13px;
+        }
+        .mac-notification strong { display: block; margin-bottom: 4px; font-size: 14px; color: #222;}
+        @keyframes slideInNotif {
+            from { transform: translateX(120%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Custom Context Menus */
+        .context-menu {
+            display: none;
+            position: absolute;
+            background: rgba(245, 245, 245, 0.95);
+            backdrop-filter: blur(15px);
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 10000;
+            padding: 5px 0;
+            min-width: 200px;
+            font-size: 14px;
+        }
+        .context-menu ul { list-style: none; margin: 0; padding: 0; }
+        .context-menu li { padding: 5px 20px; cursor: default; }
+        .context-menu li:hover { background: #0b61ff; color: white; }
+        .context-menu hr { border: none; border-top: 1px solid #ddd; margin: 4px 0; }
+
+        /* Paginated Launchpad */
+        #launchpad {
+            display: none;
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(30px);
+            z-index: 9998;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #launchpad-pages-container {
+            display: flex;
+            width: 100%;
+            height: calc(100% - 180px); /* Ensures apps never touch dots or dock */
+            padding-top: 60px; 
+            box-sizing: border-box;
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .launchpad-page {
+            width: 100vw;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            flex-shrink: 0;
+        }
+        .launchpad-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 25px 40px; 
+            width: 85%;
+            max-width: 1100px;
+        }
+        .launchpad-app {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            color: white;
+            text-align: center;
+            font-size: 13px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .launchpad-app img {
+            width: 75px; height: 75px;
+            margin-bottom: 8px;
+            transition: transform 0.2s;
+            pointer-events: none;
+        }
+        .launchpad-app:hover img { transform: scale(1.15); }
+        
+        /* Launchpad Navigation Dots */
+        #launchpad-dots {
+            position: absolute;
+            bottom: 120px; /* Safely above the dock magnification zone */
+            left: 0;
+            width: 100%;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            z-index: 10000;
+        }
+        .launchpad-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            transition: background 0.3s;
+            pointer-events: auto; 
+        }
+        .launchpad-dot.active { background: rgba(255,255,255,0.9); }
+
+        /* OS X Aqua Windows */
+        .mac-window {
+            position: absolute;
+            width: 600px;
+            height: 400px;
+            background: repeating-linear-gradient(to bottom, #eaeaea, #eaeaea 2px, #dfdfdf 2px, #dfdfdf 4px);
+            border-radius: 6px 6px 0 0;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.8);
+            display: flex;
+            flex-direction: column;
+            z-index: 5000;
+            border: 1px solid rgba(0,0,0,0.4);
+            transform-origin: bottom center;
+        }
+        .window-titlebar {
+            height: 24px;
+            background: linear-gradient(to bottom, #f9f9f9 0%, #e2e2e2 49%, #cecece 50%, #dbdbdb 100%);
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            border-bottom: 1px solid #999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+        }
+        .window-titlebar:active { cursor: grabbing; }
+        .window-controls {
+            position: absolute;
+            left: 10px;
+            display: flex;
+            gap: 6px;
+        }
+        .control { 
+            width: 12px; height: 12px; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.6), 0 1px 1px rgba(0,0,0,0.2);
+        }
+        .control.close { background: radial-gradient(circle at 50% 25%, #ff8c8c, #ff5f56); border: 1px solid #e0443e; }
+        .control.minimize { background: radial-gradient(circle at 50% 25%, #ffd466, #ffbd2e); border: 1px solid #dea123; }
+        .control.maximize { background: radial-gradient(circle at 50% 25%, #56ed6d, #27c93f); border: 1px solid #1aab29; }
+        
+        .window-title { 
+            font-size: 13px; 
+            font-weight: bold; 
+            color: #333; 
+            text-shadow: 0 1px 0 rgba(255,255,255,0.6);
+        }
+        .window-content {
+            flex: 1;
+            background: #ffffff;
+            margin: 0;
+            border-top: 1px solid #a3a3a3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            overflow: hidden; 
+            border-bottom-left-radius: 6px;
+            border-bottom-right-radius: 6px;
+            position: relative;
+        }
+
+        /* Window Resizing */
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 16px;
+            height: 16px;
+            cursor: se-resize;
+            z-index: 10;
+            background: linear-gradient(135deg, transparent 50%, rgba(150, 150, 150, 0.5) 50%, rgba(150, 150, 150, 0.5) 60%, transparent 60%, transparent 75%, rgba(150, 150, 150, 0.5) 75%, rgba(150, 150, 150, 0.5) 85%, transparent 85%);
+        }
+        
+        .dragging { opacity: 0.5; }
+
+        /* Spotlight Search */
+        #spotlight-overlay {
+            display: none; position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
+            width: 600px; background: rgba(245, 245, 245, 0.95); backdrop-filter: blur(25px);
+            border-radius: 10px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); z-index: 10005;
+            border: 1px solid rgba(0,0,0,0.2); overflow: hidden;
+        }
+        #spotlight-search { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        #spotlight-search i { font-size: 24px; color: #666; margin-right: 15px; }
+        #spotlight-search input { flex: 1; border: none; background: transparent; font-size: 26px; outline: none; font-weight: 300; }
+        #spotlight-results { max-height: 400px; overflow-y: auto; margin: 0; padding: 0; list-style: none; }
+        .spotlight-result { padding: 12px 20px; display: flex; align-items: center; gap: 15px; cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .spotlight-result:hover { background: #0b61ff; color: white; }
+        .spotlight-result img { width: 35px; height: 35px; }
+        
+        /* Notification Center (Fixed for Overflow issue) */
+        #notification-center {
+            position: fixed; 
+            top: 1.5em; right: 0; width: 320px; height: calc(100vh - 1.5em);
+            background: rgba(240, 240, 240, 0.85); backdrop-filter: blur(30px);
+            box-shadow: -5px 0 25px rgba(0,0,0,0.2); z-index: 9999;
+            transform: translateX(100%); /* Hides it securely off screen */
+            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border-left: 1px solid rgba(255,255,255,0.4);
+            padding: 20px; box-sizing: border-box; overflow-y: auto;
+        }
+        #notification-center.open { transform: translateX(0); }
+        #notification-center h3 { margin-top: 0; color: #333; font-size: 16px; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
+        .nc-item { background: rgba(255,255,255,0.8); padding: 12px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 13px; border: 1px solid rgba(0,0,0,0.05); }
+        .nc-item strong { display: block; margin-bottom: 3px; font-size: 14px; color: #222; }
+    </style>
+</head>
+<body>
+    <audio id="startup-sound" src="assets/sounds/startup.mp3" preload="auto"></audio>
+
+    <div id="notifications-container"></div>
+    
+    <div id="notification-center">
+        <h3>Notification Center</h3>
+        <div id="nc-history">
+            <div style="color:#888; font-size:13px; text-align:center; margin-top:20px;" id="nc-empty">No notifications</div>
+        </div>
+    </div>
+
+    <div id="spotlight-overlay">
+        <div id="spotlight-search">
+            <i class="fa fa-search"></i>
+            <input type="text" id="spotlight-input" placeholder="Spotlight Search" autocomplete="off">
+        </div>
+        <ul id="spotlight-results"></ul>
+    </div>
+
+    <div id="desktop-context-menu" class="context-menu">
+        <ul>
+            <li>New Folder</li>
+            <li>Get Info</li>
+            <hr>
+            <li>Change Desktop Background...</li>
+            <li>Sort By</li>
+        </ul>
+    </div>
+    <div id="icon-context-menu" class="context-menu">
+        <ul>
+            <li class="menu-open-app">Open</li>
+            <li>Move to Bin</li>
+            <hr>
+            <li>Get Info</li>
+            <li>Rename</li>
+            <li>Duplicate</li>
+        </ul>
+    </div>
+
+    <div id="launchpad">
+        <div id="launchpad-pages-container">
+            </div>
+        <div id="launchpad-dots">
+            </div>
+    </div>
+
+    <header>
+        <ul class="left">
+            <li class="apple">
+                <i class="fa fa-apple"></i>
+                <div class="submenu">
+                    <ul>
+                        <li class="menu-action">About aeroOS</li>
+                        <li class="menu-action">Software Update...</li>
+                        <li class="menu-action">aeroOS Software...</li>
+                        <li class="spacer"></li>
+                        <li class="menu-action">System Preferences...</li>
+                        <li class="hasSubMenu">Dock</li>
+                        <li class="spacer"></li>
+                        <li class="hasSubMenu">Recent Items</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x2325;&#x2318;&#x238B;">Force Quit...</li>
+                        <li class="spacer"></li>
+                        <li class="menu-action">Sleep</li>
+                        <li class="menu-action">Restart...</li>
+                        <li class="menu-action">Shut Down...</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x21E7;&#x2318;Q" id="log-out-btn">Log Out User...</li>
+                    </ul>
+                </div>
+            </li>
+            <li><strong id="active-app-name">Finder</strong>
+                <div class="submenu">
+                    <ul>
+                        <li class="menu-action" id="menu-about-app">About Finder</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" id="menu-pref-app" shortcut="&#x2318;,">Preferences...</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x21E7;&#x2318;&#x232b;">Empty Trash...</li>
+                        <li class="menu-action">Secure Empty Trash...</li>
+                        <li class="spacer"></li>
+                        <li class="hasSubMenu">Services</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;H">Hide Finder</li>
+                        <li class="shortcut menu-action" shortcut="&#x2325;&#x2318;H">Hide Others</li>
+                        <li class="noChoice menu-action">Show All</li>
+                    </ul>
+                </div>
+            </li>
+            <li>File
+                <div class="submenu">
+                    <ul>
+                        <li class="shortcut menu-action" shortcut="&#x2318;N">New Finder Window</li>
+                        <li class="shortcut menu-action" shortcut="&#x21E7;&#x2318;N">New Folder</li>
+                        <li class="shortcut noChoice" shortcut="&#x21E7;&#x2318;N">New Folder With Selection</li>
+                        <li class="shortcut menu-action" shortcut="&#x2325;&#x2318;N">New Smart Folder</li>
+                        <li class="menu-action">New Burn Folder</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;O">Open</li>
+                        <li class="hasSubMenu noChoice">Open With</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;P">Print</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;W">Close Window</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;I">Get Info</li>
+                        <li class="spacer"></li>
+                        <li class="noChoice">Compress</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;D">Duplicate</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;L">Make Alias</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;Y">Quick Look</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;R">Show Original</li>
+                        <li class="shortcut noChoice" shortcut="&#x21E7;&#x2318;P">Add to Dock</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;&#x232b;">Move to Trash</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;E">Eject</li>
+                        <li class="menu-action">Burn "Desktop" to Disc...</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;F">Find</li>
+                    </ul>
+                </div>
+            </li>
+            <li>Edit
+                <div class="submenu">
+                    <ul>
+                        <li class="noChoice shortcut" shortcut="&#x2318;Z">Undo</li>
+                        <li class="noChoice shortcut" shortcut="&#x21E7;&#x2318;Z">Redo</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;X">Cut</li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;C">Copy</li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;V">Paste</li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;A">Select All</li>
+                        <li class="spacer"></li>
+                        <li class="menu-action">Show Clipboard</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="fn fn">Start Dictation</li>
+                        <li class="menu-action">Special Characters...</li>
+                    </ul>
+                </div>
+            </li>
+            <li>View
+                <div class="submenu">
+                    <ul>
+                        <li class="noChoice shortcut" shortcut="&#x2318;1">as Icons</li>
+                        <li class="noChoice shortcut" shortcut="&#x2318;2">as List</li>
+                        <li class="noChoice shortcut" shortcut="&#x2318;3">as Columns</li>
+                        <li class="noChoice shortcut" shortcut="&#x2318;4">as Cover Flow</li>
+                        <li class="spacer"></li>
+                        <li class="noChoice">Clean Up Selection</li>
+                        <li class="hasSubMenu">Clean Up By</li>
+                        <li class="hasSubMenu">Sort By</li>
+                        <li class="spacer"></li>
+                        <li class="noChoice">Hide Path Bar</li>
+                        <li class="noChoice shortcut" shortcut="&#x2318;/">Hide Status Bar</li>
+                        <li class="noChoice shortcut" shortcut="&#x2325;&#x2318;S">Hide Sidebar</li>
+                        <li class="spacer"></li>
+                        <li class="noChoice shortcut" shortcut="&#x2325;&#x2318;T">Toolbar</li>
+                        <li class="noChoice">Customize Toolbar...</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;J">Show View Options</li>
+                    </ul>
+                </div>
+            </li>
+            <li>Go
+                <div class="submenu">
+                    <ul>
+                        <li class="shortcut noChoice" shortcut="&#x2318;[">Back</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;]">Forward</li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;&uarr;">Enclosing Folder</li>
+                        <li class="spacer"></li>
+                        <li class="hasSubMenu">Recent Folders</li>
+                        <li class="spacer"></li>
+                        <li class="shortcut menu-action" shortcut="&#x21E7;&#x2318;G">Go to Folder...</li>
+                        <li class="shortcut menu-action" shortcut="&#x2318;K">Connect to Server...</li>
+                    </ul>
+                </div>
+            </li>
+            <li>Window
+                <div class="submenu">
+                    <ul>
+                        <li class="shortcut noChoice" shortcut="&#x2318;M">Minimize</li>
+                        <li class="noChoice">Zoom</li>
+                        <li class="shortcut noChoice" shortcut="&#x2318;`">Cycle Through Windows</li>
+                        <li class="spacer"></li>
+                        <li class="noChoice">Bring All to Front</li>
+                    </ul>
+                </div>
+            </li>
+            <li>Help
+                <div class="submenu">
+                    <ul>
+                        <li class="search">Search
+                            <input id="search" type="text">
+                        </li>
+                        <li class="menu-action">Help Center</li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+        <ul class="right">
+            <li id="volume-icon-li"><i class="fa fa-volume-off" id="volume-icon"></i>
+                <div class="submenu">
+                    <ul class="volume">
+                        <li class="volume">
+                            <div>
+                                <input type="range" min="0" max="100" value="0" id="volume">
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            <li><span id="clock"></span>
+                <div class="submenu">
+                    <ul>
+                        <li id="date" class="noChoice"></li>
+                        <li class="spacer"></li>
+                        <li class="menu-action">View as Analog</li>
+                        <li class="menu-action">View as Digital</li>
+                        <li class="spacer"></li>
+                        <li class="menu-action">Open Date & Time Preferences...</li>
+                    </ul>
+                </div>
+            </li>
+            <li><span id="username-display">User</span>
+                <div class="submenu">
+                    <ul>
+                        <li class="menu-action">Account Settings</li>
+                    </ul>
+                </div>
+            </li>
+            <li id="trigger-spotlight"><i class="fa fa-search"></i></li>
+            <li id="trigger-nc"><i class="fa fa-bars"></i></li>
+        </ul>
+    </header>
+
+    <div id="Desktop">
+        <span class="icon desktop-app" data-title="aeroOS HD"><img src="assets/img/files/Disk.png" alt="Hard Drive"></span>
+        <span class="icon desktop-app" data-title="Projects"><img src="assets/img/files/Folder.png" alt="Folder"></span>
+        <span class="icon desktop-app" data-title="Document"><img src="assets/img/files/Generic.png" alt="File"></span>
+    </div>
+
+    <footer>
+        <ul id="dock-list">
+            <li class="dock-item" data-title="Finder" id="dock-Finder"><img src="assets/img/apps/Finder.png" alt="Finder"></li>
+            <li class="dock-item" data-title="Launchpad" id="dock-Launchpad"><img src="assets/Launchpad.png" alt="Launchpad"></li>
+            <li class="dock-item" data-title="Web Browser" id="dock-Web_Browser"><img src="assets/img/apps/Web Browser.png" alt="Web Browser"></li>
+            <li class="dock-item" data-title="QuickTime" id="dock-QuickTime"><img src="assets/img/apps/QuickTime.png" alt="QuickTime"></li>
+            <li class="dock-item" data-title="App Store" id="dock-App_Store"><img src="assets/img/apps/App Store.png" alt="App Store"></li>
+            <li class="dock-item" data-title="System Preferences" id="dock-System_Preferences"><img src="assets/img/apps/System Preferences.png" alt="Preferences"></li>
+            
+            <li class="dock-separator" id="dock-separator"></li>
+            
+            <li class="dock-item" data-title="Bin" id="dock-Bin"><img src="assets/img/files/Bin (empty).png" alt="Bin"></li>
+        </ul>
+    </footer>
+
+    <script>
+        // --- CORE SYSTEM VARIABLES ---
+        let windowZIndex = 5000;
+        let activeAppTitle = 'Finder';
+
+        // Set User Name from URL parameter
+        $(document).ready(function() {
+            if (userParam) {
+                $('#username-display').text(userParam);
+                $('#log-out-btn').text(`Log Out ${userParam}...`);
+            }
+        });
+
+        // 1. Notification System
+        function notify(title, message) {
+            const $notif = $(`
+                <div class="mac-notification">
+                    <strong>${title}</strong>
+                    <span>${message}</span>
+                </div>
+            `);
+            $('#notifications-container').append($notif);
+            
+            // Push to Notification Center History
+            $('#nc-empty').hide();
+            $('#nc-history').prepend(`
+                <div class="nc-item">
+                    <strong>${title}</strong>
+                    <span>${message}</span>
+                </div>
+            `);
+
+            setTimeout(() => {
+                $notif.fadeOut(300, function() { $(this).remove(); });
+            }, 5000);
+        }
+
+        $(document).ready(function() {
+            const startupSound = document.getElementById('startup-sound');
+            if (startupSound) {
+                const playPromise = startupSound.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(error => {
+                        console.warn("Audio autoplay cleanly skipped.");
+                        $(document).one('click', function() { startupSound.play().catch(e=>{}); });
+                    });
+                }
+            }
+            setTimeout(() => notify("System Ready", "aeroOS loaded successfully."), 1000);
+        });
+
+        // 2. Paginated Launchpad Implementation
+        const launchpadApps = [
+            "GarageBand", "Chess", "Assistant", "Grapher", "Books", "Pages", "Screencast", 
+            "Keynote", "Font Book", "Game Center", "Contacts", "Photo Booth", "Time Machine", 
+            "Calculator", "Internet Chat", "Dictionary", "Pixelmator", "System Preferences", 
+            "Web Browser", "QuickTime", "Disk Utility", "Movie Maker", "Mail", "Console", 
+            "Calendar", "Notes", "Code", "Finder"
+        ];
+        
+        const appsPerPage = 21; 
+        const totalPages = Math.ceil(launchpadApps.length / appsPerPage);
+        let currentLaunchpadPage = 0;
+        
+        const $pagesContainer = $('#launchpad-pages-container');
+        const $dotsContainer = $('#launchpad-dots');
+
+        for (let i = 0; i < totalPages; i++) {
+            const $page = $(`<div class="launchpad-page"><div class="launchpad-grid"></div></div>`);
+            const $grid = $page.find('.launchpad-grid');
+            
+            const pageApps = launchpadApps.slice(i * appsPerPage, (i + 1) * appsPerPage);
+            pageApps.forEach(app => {
+                $grid.append(`
+                    <div class="launchpad-app" data-title="${app}" draggable="true">
+                        <img src="assets/img/apps/${app}.png" alt="${app}" onerror="this.onerror=null; this.src='assets/img/files/Generic.png';">
+                        <span>${app}</span>
+                    </div>
+                `);
+            });
+            $pagesContainer.append($page);
+            $dotsContainer.append(`<div class="launchpad-dot ${i === 0 ? 'active' : ''}" data-page="${i}"></div>`);
+        }
+
+        function updateLaunchpadPage(pageIndex) {
+            currentLaunchpadPage = pageIndex;
+            $pagesContainer.css('transform', `translateX(-${pageIndex * 100}vw)`);
+            $('.launchpad-dot').removeClass('active');
+            $(`.launchpad-dot[data-page="${pageIndex}"]`).addClass('active');
+        }
+
+        $('.launchpad-dot').click(function(e) {
+            e.stopPropagation();
+            updateLaunchpadPage($(this).data('page'));
+        });
+
+        $(document).on('click', '.dock-item[data-title="Launchpad"]', function() {
+            $('#launchpad').css('display', 'flex').hide().fadeIn(300);
+            updateLaunchpadPage(0); 
+        });
+        
+        $('#launchpad').click(function(e) {
+            if (e.target.id === 'launchpad' || $(e.target).hasClass('launchpad-page')) {
+                $(this).fadeOut(300);
+            }
+        });
+
+        // 3. Universal App Window System (Aqua realistic & Iframe Integration)
+        function spawnWindow(title, sourceElement) {
+            title = title.replace(/\.\.\.$/, '').trim();
+            
+            let $dockItem = $(`.dock-item[data-title="${title}"]`);
+            
+            if ($dockItem.length === 0) {
+                const tempHTML = `<li class="dock-item temp-dock-item" data-title="${title}"><img src="assets/img/apps/${title}.png" alt="${title}" onerror="this.onerror=null; this.src='assets/img/files/Generic.png';"></li>`;
+                $(tempHTML).insertBefore('#dock-Bin');
+                $dockItem = $(`.dock-item[data-title="${title}"]`);
+                $dockItem[0].offsetHeight; 
+            }
+
+            let $win = $(`.mac-window[data-app="${title}"]`);
+            
+            activeAppTitle = title;
+            $('#active-app-name').text(title);
+            $('#menu-about-app').text(`About ${title}`);
+            
+            if ($win.length > 0 && $win.is(':visible')) {
+                $win.css('z-index', ++windowZIndex);
+                return;
+            }
+
+            if ($win.length === 0) {
+                const winId = 'win-' + Date.now();
+                
+                let contentHtml = '';
+                const contentMap = {
+                    'About aeroOS': '<i class="fa fa-apple" style="font-size:70px; color:#333; margin-bottom:15px;"></i><h2 style="margin:0; font-size:28px;">aeroOS</h2><p style="margin:5px 0 15px; color:#888;">Version 1.0.4</p><p style="font-size:14px; text-align:center;">Simulated Environment<br>Memory: 16 GB 2400 MHz DDR4</p>',
+                    'System Preferences': '<i class="fa fa-cogs" style="font-size:50px; color:#555; margin-bottom:15px;"></i><h3 style="margin:0;">System Preferences</h3><p style="font-size:15px; margin-top:10px;">Personalize your aeroOS experience.</p>'
+                };
+
+                if (contentMap[title]) {
+                    contentHtml = contentMap[title];
+                } else if (title.startsWith('About ')) {
+                    const appName = title.replace('About ', '');
+                    contentHtml = `<img src="assets/img/apps/${appName}.png" style="width:80px; margin-bottom:20px;" onerror="this.onerror=null; this.src='assets/img/files/Generic.png';"><br><h3 style="margin:0;">${appName}</h3><p style="color:#777;">Version 1.0</p><p style="font-size:14px;">All rights reserved.</p>`;
+                } else if (title.endsWith(' Preferences')) {
+                    const appName = title.replace(' Preferences', '');
+                    contentHtml = `<img src="assets/img/apps/${appName}.png" style="width:60px; margin-bottom:20px;" onerror="this.onerror=null; this.src='assets/img/files/Generic.png';"><br><h3 style="margin:0;">${appName} Preferences</h3><p style="font-size:14px;">Settings for ${appName} will appear here.</p>`;
+                } else {
+                    contentHtml = `<iframe src="apps/${title}.html" style="width:100%; height:100%; border:none; background:#fff;"></iframe>`;
+                }
+
+                const html = `
+                    <div id="${winId}" class="mac-window" data-app="${title}">
+                        <div class="window-titlebar">
+                            <div class="window-controls">
+                                <div class="control close" title="Close"></div>
+                                <div class="control minimize" title="Minimize"></div>
+                                <div class="control maximize" title="Zoom"></div>
+                            </div>
+                            <span class="window-title">${title}</span>
+                        </div>
+                        <div class="window-content">
+                            ${contentHtml}
+                        </div>
+                        <div class="resize-handle"></div>
+                    </div>
+                `;
+                $('body').append(html);
+                $win = $('#' + winId);
+                
+                setupDraggable($win);
+
+                $win.find('.close').click(function(e) {
+                    e.stopPropagation();
+                    const rect = $dockItem[0].getBoundingClientRect();
+                    const iconCX = rect.left + (rect.width / 2);
+                    const iconCY = rect.top + (rect.height / 2);
+                    
+                    $win.css({
+                        transform: `translate(${iconCX - 300}px, ${iconCY - 400}px) scaleX(0.05) scaleY(0.01)`,
+                        opacity: 0,
+                        transition: 'transform 0.4s cubic-bezier(0.7, 0, 0.3, 1), opacity 0.3s ease-in'
+                    });
+
+                    setTimeout(() => {
+                        $win.remove();
+                        if ($dockItem.hasClass('temp-dock-item')) $dockItem.remove();
+                    }, 400); 
+                    $('#active-app-name').text('Finder');
+                });
+                
+                $win.find('.minimize').click(function(e) {
+                    e.stopPropagation();
+                    const rect = $dockItem[0].getBoundingClientRect();
+                    const iconCX = rect.left + (rect.width / 2);
+                    const iconCY = rect.top + (rect.height / 2);
+
+                    $win.css({
+                        transform: `translate(${iconCX - 300}px, ${iconCY - 400}px) scaleX(0.05) scaleY(0.01)`,
+                        opacity: 0,
+                        transition: 'transform 0.5s cubic-bezier(0.7, 0, 0.84, 0), opacity 0.4s ease-in'
+                    });
+                    
+                    setTimeout(() => $win.hide(), 500);
+                    $('#active-app-name').text('Finder');
+                });
+
+                $win.mousedown(function() {
+                    $(this).css('z-index', ++windowZIndex);
+                    $('#active-app-name').text(title);
+                });
+            }
+
+            $win.css('z-index', ++windowZIndex).show();
+            
+            const iconRect = $dockItem[0].getBoundingClientRect();
+            const iconCX = iconRect.left + (iconRect.width / 2);
+            const iconCY = iconRect.top + (iconRect.height / 2);
+            
+            $win.css({
+                transform: `translate(${iconCX - 300}px, ${iconCY - 400}px) scaleX(0.05) scaleY(0.01)`,
+                opacity: 0,
+                transition: 'none'
+            });
+            
+            $win[0].offsetHeight; 
+            
+            $win.css({
+                transform: `translate(calc(50vw - 300px), calc(50vh - 200px)) scale(1)`,
+                opacity: 1,
+                transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease-out'
+            });
+        }
+
+        let dragState = {
+            isDragging: false, isResizing: false, $win: null,
+            startX: 0, startY: 0, startW: 0, startH: 0, initialX: 0, initialY: 0
+        };
+
+        $(document).mousemove(function(e) {
+            if (dragState.isDragging && dragState.$win) {
+                const dx = e.clientX - dragState.startX;
+                const dy = e.clientY - dragState.startY;
+                dragState.$win.css('transform', `translate(${dragState.initialX + dx}px, ${dragState.initialY + dy}px) scale(1)`);
+            } else if (dragState.isResizing && dragState.$win) {
+                const dx = e.clientX - dragState.startX;
+                const dy = e.clientY - dragState.startY;
+                dragState.$win.css({
+                    width: Math.max(300, dragState.startW + dx) + 'px',
+                    height: Math.max(200, dragState.startH + dy) + 'px'
+                });
+            }
+        });
+
+        $(document).mouseup(function() {
+            if (dragState.isDragging || dragState.isResizing) {
+                dragState.isDragging = false;
+                dragState.isResizing = false;
+                if (dragState.$win) {
+                    dragState.$win.find('iframe').css('pointer-events', 'auto');
+                    dragState.$win = null;
+                }
+            }
+        });
+
+        function setupDraggable($win) {
+            const $titlebar = $win.find('.window-titlebar');
+            const $resizer = $win.find('.resize-handle');
+            
+            $titlebar.mousedown(function(e) {
+                if ($(e.target).hasClass('control')) return;
+                dragState.isDragging = true;
+                dragState.$win = $win;
+                
+                $win.find('iframe').css('pointer-events', 'none');
+
+                const matrix = $win.css('transform').match(/matrix.*\((.+)\)/);
+                if (matrix) {
+                    const parts = matrix[1].split(', ');
+                    dragState.initialX = parseFloat(parts[4]);
+                    dragState.initialY = parseFloat(parts[5]);
+                } else {
+                    dragState.initialX = (window.innerWidth / 2) - 300;
+                    dragState.initialY = (window.innerHeight / 2) - 200;
+                }
+                
+                dragState.startX = e.clientX;
+                dragState.startY = e.clientY;
+                $win.css('transition', 'none'); 
+            });
+
+            $resizer.mousedown(function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                dragState.isResizing = true;
+                dragState.$win = $win;
+                
+                dragState.startX = e.clientX;
+                dragState.startY = e.clientY;
+                dragState.startW = $win.width();
+                dragState.startH = $win.height();
+                $win.find('iframe').css('pointer-events', 'none');
+                $win.css('transition', 'none');
+            });
+        }
+
+        $(document).on('click', '.dock-item', function() {
+            const title = $(this).attr('data-title');
+            if (title !== 'Launchpad' && title !== 'Bin') spawnWindow(title, this);
+        });
+
+        $(document).on('click', '.launchpad-app', function() {
+            const title = $(this).attr('data-title');
+            spawnWindow(title, this);
+            $('#launchpad').fadeOut(300);
+        });
+
+        $(document).on('dblclick', '.desktop-app', function() {
+            spawnWindow($(this).data('title'), this);
+        });
+
+
+        // --- TOP BAR STRICT CLICK HANDLING ---
+        $("header > ul > li").off('click').on('click', function(e) {
+            if ($(e.target).closest('.submenu').length > 0) return;
+            if ($(this).find(".submenu").length === 0) return;
+            
+            e.stopPropagation();
+            $(".visible").removeClass("visible");
+            $(this).find(".submenu").addClass("visible").fadeIn(100);
+            $(".selected").removeClass("selected");
+            $(this).addClass("selected");
+        });
+
+        // Top Menu Actions Open Window
+        $(document).on('click', '.menu-action', function(e) {
+            e.stopPropagation();
+            let title = $(this).text().trim();
+            
+            if (this.id === 'menu-about-app') title = `About ${activeAppTitle}`;
+            if (this.id === 'menu-pref-app') title = `${activeAppTitle} Preferences`;
+            
+            if (title) spawnWindow(title, this);
+            $(".visible").removeClass("visible");
+            $(".selected").removeClass("selected");
+        });
+
+        // --- Notification Center & Spotlight ---
+
+        $('#trigger-nc').click(function(e) {
+            e.stopPropagation();
+            $('#notification-center').toggleClass('open');
+            $(".visible").removeClass("visible");
+            $(".selected").removeClass("selected");
+        });
+
+        $('#trigger-spotlight').click(function(e) {
+            e.stopPropagation();
+            $('#spotlight-overlay').fadeIn(200);
+            $('#spotlight-input').val('').focus();
+            $('#spotlight-results').empty();
+            $(".visible").removeClass("visible");
+            $(".selected").removeClass("selected");
+        });
+
+        // Smart, unified outside click handler
+        $(document).click(function(e) {
+            if ($(e.target).closest('header > ul > li').length === 0) {
+                $(".selected").removeClass("selected");
+                $(".visible").removeClass("visible");
+            }
+            if (!$(e.target).closest('#notification-center, #trigger-nc').length) {
+                $('#notification-center').removeClass('open');
+            }
+            if (!$(e.target).closest('#spotlight-overlay, #trigger-spotlight').length) {
+                $('#spotlight-overlay').fadeOut(200);
+            }
+        });
+
+        $('#spotlight-input').on('input', function() {
+            const query = $(this).val().toLowerCase();
+            const $results = $('#spotlight-results');
+            $results.empty();
+            
+            if (query.trim() === '') return;
+
+            const matches = launchpadApps.filter(app => app.toLowerCase().includes(query));
+            matches.forEach(app => {
+                $results.append(`
+                    <li class="spotlight-result" data-title="${app}">
+                        <img src="assets/img/apps/${app}.png" onerror="this.src='assets/img/files/Generic.png'">
+                        <span>${app}</span>
+                    </li>
+                `);
+            });
+        });
+
+        // Spotlight clicks MUST target the document level to trigger
+        $(document).on('click', '.spotlight-result', function(e) {
+            e.stopPropagation();
+            spawnWindow($(this).attr('data-title'), this);
+            $('#spotlight-overlay').fadeOut(200);
+        });
+
+
+        // 4. Drag & Drop Dock Logic (Preserved & Updated)
+        let draggedAppData = null;
+        let dragSource = null;
+
+        $(document).on('dragstart', '.launchpad-app, .dock-item', function(e) {
+            draggedAppData = {
+                title: $(this).data('title'),
+                src: $(this).find('img').attr('src')
+            };
+            dragSource = $(this).hasClass('dock-item') ? 'dock' : 'launchpad';
+            e.originalEvent.dataTransfer.setData('text/plain', 'app');
+            $(this).addClass('dragging');
+        });
+
+        $(document).on('dragend', '.launchpad-app, .dock-item', function(e) {
+            $(this).removeClass('dragging');
+        });
+
+        $('footer').on('dragover', function(e) { e.preventDefault(); });
+
+        $('footer').on('drop', function(e) {
+            e.preventDefault();
+            if (dragSource === 'launchpad' && draggedAppData) {
+                if ($(`.dock-item[data-title="${draggedAppData.title}"]`).length === 0) {
+                    const newItemHTML = `<li class="dock-item" data-title="${draggedAppData.title}" draggable="true"><img src="${draggedAppData.src}" alt="${draggedAppData.title}"></li>`;
+                    $(newItemHTML).insertBefore('#dock-separator');
+                    notify("Dock Updated", `${draggedAppData.title} added to the dock.`);
+                } else if ($(`.dock-item[data-title="${draggedAppData.title}"]`).hasClass('temp-dock-item')) {
+                    const $item = $(`.dock-item[data-title="${draggedAppData.title}"]`);
+                    $item.removeClass('temp-dock-item').attr('draggable', 'true');
+                    $item.insertBefore('#dock-separator');
+                    notify("Dock Updated", `${draggedAppData.title} pinned to the dock.`);
+                }
+            }
+        });
+
+        $('body').on('dragover', function(e) {
+            if (!$(e.target).closest('footer').length) { e.preventDefault(); }
+        });
+
+        $('body').on('drop', function(e) {
+            if (!$(e.target).closest('footer').length) {
+                if (dragSource === 'dock' && draggedAppData) {
+                    const title = draggedAppData.title;
+                    if (title !== 'Finder' && title !== 'Launchpad' && title !== 'Bin') {
+                        $(`.dock-item[data-title="${title}"]`).remove();
+                        notify("Poof!", `${title} removed from the dock.`);
+                    } else {
+                        notify("Action Blocked", `Cannot remove ${title} from the dock.`);
+                    }
+                }
+            }
+        });
+
+        // 5. Custom Context Menus
+        let lastRightClickedItem = null;
+        $(document).on("contextmenu", function(e) {
+            e.preventDefault();
+            $(".context-menu").hide();
+            
+            let $menu = $("#desktop-context-menu");
+            const $icon = $(e.target).closest('.icon, .dock-item, .launchpad-app');
+            if ($icon.length > 0) {
+                $menu = $("#icon-context-menu");
+                lastRightClickedItem = $icon;
+            }
+            
+            $menu.css({ display: 'block', visibility: 'hidden', top: 0, left: 0 });
+            
+            let posX = e.pageX;
+            let posY = e.pageY;
+            
+            if (posX + $menu.outerWidth() > window.innerWidth) posX = window.innerWidth - $menu.outerWidth() - 5;
+            if (posY + $menu.outerHeight() > window.innerHeight) posY = window.innerHeight - $menu.outerHeight() - 5;
+            
+            $menu.css({ top: posY, left: posX, visibility: 'visible' });
+        });
+
+        $(document).on("click", function() {
+            $(".context-menu").hide();
+        });
+
+        $('.menu-open-app').click(function() {
+            if(lastRightClickedItem) {
+                spawnWindow(lastRightClickedItem.data('title'), lastRightClickedItem[0]);
+                $('#launchpad').fadeOut(300);
+            }
+        });
+
+        function updateClock() {
+            var currentTime = new Date();
+            var currentHours = currentTime.getHours();
+            var currentMinutes = currentTime.getMinutes();
+            var timeOfDay = (currentHours < 12) ? "AM" : "PM";
+            currentHours = (currentHours > 12) ? currentHours - 12 : currentHours;
+            currentHours = (currentHours === 0) ? 12 : currentHours;
+            currentMinutes = (currentMinutes < 10 ? "0" : "") + currentMinutes;
+
+            var shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            var day = shortDays[currentTime.getDay()];
+            
+            $("#clock").html(day + " " + currentHours + ":" + currentMinutes + " " + timeOfDay);
+        }
+
+        $(document).ready(function() {
+            updateClock();
+            setInterval(updateClock, 1000); 
+        });
+
+        $("#Desktop span").click(function(e) {
+            e.stopPropagation();
+            if (e.shiftKey) {
+                $(this).addClass("focus");
+            } else {
+                $(".focus").removeClass("focus");
+                $(this).addClass("focus");
+            }
+        });
+
+        $("body:not(#Desktop span)").click(function() {
+            $("#Desktop span").removeClass("focus");
+        });
+
+        $("footer").on('click', 'img', function() {
+            $(this).removeClass("jump");
+            this.offsetWidth = this.offsetWidth; 
+            $(this).addClass("jump");
+        });
+
+        $("#volume").on("change mousemove", function() {
+            if ($(this).val() < 10) {
+                $("#volume-icon").removeClass().addClass("fa fa-volume-off");
+            } else if ($(this).val() >= 10 && $(this).val() < 66) {
+                $("#volume-icon").removeClass().addClass("fa fa-volume-down");
+            } else {
+                $("#volume-icon").removeClass().addClass("fa fa-volume-up");
+            }
+        });
+    </script>
+</body>
+</html>
