@@ -122,6 +122,7 @@
         
         .submenu ul li {
             display: block !important;
+            vertical-align: middle;
             float: none;
             margin-right: 75px;
             font-weight: 400;
@@ -182,10 +183,17 @@
             border: 2px solid rgba(225, 225, 225, 0);
             border-radius: 6px;
             transition: all 0.2s;
-            width: 65px;
+            width: 75px;
         }
-        .focus img { border: 2px solid rgba(225, 225, 225, 0.5) !important; }
-        span.focus:after { background: rgba(20, 110, 206, 0.8); text-shadow: none !important;}
+        .focus img { 
+            border: 2px solid rgba(225, 225, 225, 0.5) !important; 
+            border-radius: 6px;
+        }
+        span.focus:after { 
+            background: #146ece; 
+            border-radius: 15px;
+            text-shadow: none !important;
+        }
 
         /*--Dock--*/
         footer {
@@ -206,11 +214,7 @@
             width: max-content;
         }
         footer:before {
-            background: linear-gradient(to top, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.1) 100%);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.3);
-            border-bottom: none;
-            border-radius: 5px 5px 0 0;
+            background: linear-gradient(to top, rgb(230, 230, 230) 0%, rgb(163, 163, 163) 100%);
             bottom: 0;
             content: "";
             height: 4em;
@@ -219,10 +223,9 @@
             position: absolute;
             right: 0;
             top: 0;
-            transform: rotatex(30deg);
+            transform: rotatex(45deg);
             width: 100%;
             z-index: -1;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
         }
         footer ul {
             display: flex;
