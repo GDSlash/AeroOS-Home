@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     
+    <!-- Auth & User Parsing Logic -->
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const authParam = urlParams.get('auth');
@@ -214,7 +215,7 @@
             width: max-content;
         }
         footer:before {
-            background: linear-gradient(to top, rgb(230, 230, 230) 0%, rgb(163, 163, 163) 100%);
+            background: linear-gradient(to top, rgba(230, 230, 230, 1) 0%, rgba(163, 163, 163, 1) 100%);
             bottom: 0;
             content: "";
             height: 4em;
@@ -1349,10 +1350,13 @@
             $("#Desktop span").removeClass("focus");
         });
 
-        $("footer").on('click', 'img', function() {
-            $(this).removeClass("jump");
-            this.offsetWidth = this.offsetWidth; 
-            $(this).addClass("jump");
+        $("footer").on('click', 'li', function() {
+            var $img = $(this).find('img');
+            if ($img.length > 0) {
+                $img.removeClass("jump");
+                $img[0].offsetWidth = $img[0].offsetWidth; 
+                $img.addClass("jump");
+            }
         });
 
         $("#volume").on("change mousemove", function() {
