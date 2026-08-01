@@ -1,0 +1,12 @@
+[
+    {
+        "username": "Administrator",
+        "password": "Aero1_Admin",
+        "avatar": "assets/img/avatars/Flower1.png"
+    },
+    {
+        "username": "Nikolas",
+        "password": "Nikolas123",
+        "avatar": "assets/img/avatars/Sailboat.png"
+    }
+]
